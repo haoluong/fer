@@ -1,8 +1,0 @@
-matplotlib
-tensorflow~=2.0
-opencv-python
-opencv-contrib-python
-pandas
-Pillow
-requests
-mtcnn
