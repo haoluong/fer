@@ -215,7 +215,7 @@ class Video(object):
             os.makedirs(self.outdir, exist_ok=True)
         root, ext = os.path.splitext(os.path.basename(self.filepath))
         outfile = os.path.join(self.outdir, f"{root}_output{ext}")
-
+        print(fps, width, height)
         if save_video:
             videowriter = self._save_video(outfile, fps, width, height)
 
