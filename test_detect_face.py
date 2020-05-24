@@ -6,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 import time
 
-from modules.models import RetinaFaceModel
+from modules.network import RetinaFaceModel
 from modules.utils import (set_memory_growth, load_yaml, draw_bbox_landm,
                            pad_input_image, recover_pad_output)
 from fer.util import preprocess_input, decode_emotion
@@ -20,7 +20,7 @@ flags.DEFINE_float('iou_th', 0.4, 'iou threshold for nms')
 flags.DEFINE_float('score_th', 0.5, 'score threshold for nms')
 flags.DEFINE_float('down_scale_factor', 1.0, 'down-scale factor for inputs')
 flags.DEFINE_string('output_path', '', 'path of output for saving')
-
+flags.DEFINE_string('input_path', '', 'path of input for saving')
 def main(_argv):
     # init
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -82,14 +82,17 @@ def main(_argv):
         print(f"[*] save result at {save_img_path}")
 
     else:
-        cam = cv2.VideoCapture(0)
+        print(FLAGS.input_path)
+        if FLAGS.input_path == '':
+            cam = cv2.VideoCapture(0)
+        else:
+            cam = cv2.VideoCapture(FLAGS.input_path)
         if FLAGS.output_path != '':
-            cam = cv2.VideoCapture(FLAGS.output_path)
             fourcc = cv2.VideoWriter_fourcc("m", "p", "4", "v")
             fps = cam.get(cv2.CAP_PROP_FPS)
             h, w = (int(cam.get(cv2.CAP_PROP_FRAME_HEIGHT)),int(cam.get(cv2.CAP_PROP_FRAME_WIDTH)))
             out = cv2.VideoWriter(FLAGS.output_path,fourcc, fps, (w,h), True)
-            print(f"[*] save result at {FLAGS.output_path} with FPS = {fps} height = {height} width = {width}")
+            print(f"[*] save result at {FLAGS.output_path} with FPS = {fps} height = {h} width = {w}")
         start_time = time.time()
         while cam.isOpened():
             ret, frame = cam.read()
@@ -120,6 +123,21 @@ def main(_argv):
                 #get bounding box
                 b_box = max(int(ann[0] * frame_width),0), max(int(ann[1] * frame_height),0), \
                         min(int(ann[2] * frame_width),frame_width), min(int(ann[3] * frame_height),frame_height)
+                left_eye = (int(ann[4]*frame_width), int(ann[5]*frame_height))
+                right_eye = (int(ann[6]*frame_width), int(ann[7]*frame_height))
+                center_eye = (int((ann[4]+ann[6])*frame_width/2), int((ann[5]+ann[7])*frame_height/2))
+                nose = (int(ann[8]*frame_width), int(ann[9]*frame_height))
+                left_mouth = (int(ann[10]*frame_width), int(ann[11]*frame_height))
+                right_mouth = (int(ann[12]*frame_width), int(ann[13]*frame_height))
+                center_mouth = (int((ann[10]+ann[12])*frame_width/2), int((ann[11]+ann[13])*frame_height/2))
+                cv2.circle(frame, left_eye, 1, (0, 255, 0),2)
+                cv2.circle(frame, right_eye, 1, (0, 255, 0),2)
+                cv2.circle(frame, nose, 1, (0, 255, 0),2)
+                cv2.circle(frame, left_mouth, 1, (0, 255, 0),2)
+                cv2.circle(frame, right_mouth, 1, (0, 255, 0),2)
+                cv2.line(frame, center_eye, center_mouth, (0, 255, 0),2)
+                cv2.line(frame, center_mouth, nose, (0, 255, 0),2)
+                cv2.line(frame, nose, center_eye, (0, 255, 0),2)
                 face_frame = frame[b_box[1]:b_box[3], b_box[0]:b_box[2], :]
                 gray_img = cv2.cvtColor(face_frame, cv2.COLOR_BGR2GRAY)
                 scaled = cv2.resize(gray_img, (64,64), interpolation=cv2.INTER_CUBIC)
@@ -127,13 +145,17 @@ def main(_argv):
                 reshaped = scaled.reshape((1,64,64,1))
                 res = emotion_model.predict(reshaped)[0]
                 #decode predict
-                label = decode_emotion(np.argmax(res))
-                text = "{:.2f}".format(np.amax(res))
+                if np.amax(res) > 0.6:
+                    text = "{:.2f}".format(np.amax(res))
+                    #cv2.putText(frame, text, (b_box[0], b_box[1]+15),
+                    #        cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 255))
+                    label = decode_emotion(np.argmax(res))
+                else:
+                    label = "neutral"
                 #draw
-                cv2.rectangle(frame, (b_box[0], b_box[1]), (b_box[2], b_box[3]), (0, 255, 0), 2)
+                
+                cv2.rectangle(frame, (b_box[0], b_box[1]), (b_box[2], b_box[3]), (0, 255, 0), 1)
                 cv2.putText(frame, label, (b_box[0], b_box[1]),
-                        cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 255))
-                cv2.putText(frame, text, (b_box[0], b_box[1]+15),
                         cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 255))
             # calculate fps
             fps_str = "FPS: %.2f" % (1 / (time.time() - start_time))
