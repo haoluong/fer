@@ -2,7 +2,7 @@ IMAGE_SIZE = 160
 MARGIN = 16
 CHECKPOINT_PATH = "checkpoints/emotion_model.hdf5" #"weights/arc_mbv2.h5" 
 CFG_RETINA = "configs/retinaface_mbv2.yaml"
-RTSP_ADDR = "rtsp://192.168.1.183:554"
+RTSP_ADDR = "rtsp://192.168.1.184:554"
 # initialize Redis connection settings
 REDIS_HOST = "localhost"
 REDIS_PORT = 6379

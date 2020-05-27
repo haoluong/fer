@@ -29,6 +29,7 @@ class DBStorage():
     def __init__(self):
         self.client = MongoClient("mongodb+srv://admin:admin@users-y49w0.gcp.mongodb.net/test?retryWrites=true&w=majority")
         self.db = self.client.class_emo #lay database
+        self.period = None
     
     def save(self, room_stt):
         room = self.db.class_twos  #lay bang users

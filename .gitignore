@@ -109,3 +109,5 @@ ENV/
 
 data.csv
 .DS_Store
+
+*/logs/*

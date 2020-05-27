@@ -4,6 +4,7 @@ import numpy as np
 import time
 import settings
 import sys
+from _thread import start_new_thread
 from modules.retinaface import RetinaFace
 from modules.fer import FER
 from modules.db_storage import ClassEmotionStatus, DBStorage
@@ -28,12 +29,13 @@ def main(argv):
         _, frame = cam.read()
         if frame is None:
             print("no cam input")
+            break
         frame_height, frame_width, _ = frame.shape
         b_boxes, keypoints, faces = detect_model.extract_faces(frame)
         results = emotion_model.predict(faces) if len(faces) > 0 else []
         labels, atten_metric = attentor.get_attention(results, keypoints, b_boxes, frame_height, frame_width) if len(b_boxes) > 0 else ([],0)
         room_stt = ClassEmotionStatus(results, atten_metric, time.strftime('%Y-%m-%d %H:%M:%S'))
-        storager.save(room_stt)
+        start_new_thread(storager.save, (room_stt,))
         for prior_index in range(len(b_boxes)):
             ann = b_boxes[prior_index]
             keypoint = keypoints[prior_index]
